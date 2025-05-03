@@ -1,0 +1,6 @@
+# Directories #
+###################
+**/__pycache__
+**/ocr/__pycache__
+**/data
+**/results
