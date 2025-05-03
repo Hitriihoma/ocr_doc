@@ -1,0 +1,275 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sat May  3 14:48:22 2025
+
+@author: Hitriihoma (hitriihoma@gmail.com, https://github.com/Hitriihoma)
+"""
+
+import cv2
+import numpy as np
+from paddleocr import PaddleOCR
+
+class OCR_doc():
+    def __init__(self):
+        pass
+    
+    def load_image(self, path):
+        '''
+        Load image to ndarray format
+
+        Parameters
+        ----------
+        path : string
+            Path to image file.
+
+        Returns
+        -------
+        image : numpy.ndarray
+            ndarray of image.
+
+        '''
+        # Load the image
+        image = cv2.imread(path) # './examples/hw_all.jpg'
+        return image
+
+    def find_cells(self, image, skiprows=0, num_col=1):
+        '''
+        Find cells with numbers (by known column and rows)
+
+        Parameters
+        ----------
+        image : numpy.ndarray
+            ndarray of image.
+        skiprows : integer, optional
+            How many rows skip for header (not include in result). The default is 0.
+        num_col : integer, optional
+            Whick column contains numbers. The default is 1.
+
+        Returns
+        -------
+        cells : numpy.ndarray
+            Array of cells coordinates.
+
+        '''
+        # Load the image
+        #image = cv2.imread('./tests/examples/hw_1.jpg')
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+        # Perform edge detection
+        edges = cv2.Canny(gray, 50, 150)
+
+        # Apply Probabilistic Hough Line Transform
+        lines = cv2.HoughLinesP(edges, 1, np.pi/180, 50, minLineLength=200, maxLineGap=10)
+        # Examples x1, y1, x2, y2: [[248 1245 248 5]] [[36 622 326 622]]
+        # x1=x2, y1>y2; x1<x2, y1=y2
+
+        # Find table borders: min adn max x,y
+        # Maybe use collections.Counter if there are many border points
+        min_x, max_x, min_y, max_y = image.shape[1], 0, image.shape[0], 0 # 923, 0, 1280, 0
+        if lines is not None:
+            for line in lines:
+                x1, y1, x2, y2 = line[0]
+                if max(x1,x2) > max_x:
+                    max_x = max(x1,x2)
+                if min(x1,x2) < min_x:
+                    min_x = min(x1,x2)
+                if max(y1,y2) > max_y:
+                    max_y = max(y1,y2)
+                if min(y1,y2) < min_y:
+                    min_y = min(y1,y2)
+                
+        # Extend all lines to table borders
+        if lines is not None:
+            for line_index in range(len(lines)):
+                line = lines[line_index]
+                x1, y1, x2, y2 = line[0]
+                if x1 == x2: # Vertical line
+                    if y1 > min_y:
+                        lines[line_index][0][1] = min_y
+                    if y2 < max_y:
+                        lines[line_index][0][3] = max_y
+                if y1 == y2: # Horizontal line
+                    if x1 > min_x:
+                        lines[line_index][0][0] = min_x
+                    if x2 < max_x:
+                        lines[line_index][0][2] = max_x     
+
+        # Make matrix, where cells filled by lines
+        # y: len(image): 1280; x: len(image[0]): 923
+        lines_matrix = np.zeros([len(image),len(image[0])]) # Zero matrix
+        if lines is not None:
+            for line_index in range(len(lines)):
+                line = lines[line_index]
+                x1, y1, x2, y2 = line[0] # y is row index, x is element index in row
+                if x1 == x2: # Вертикальная линия
+                    for y_index in range(y1,y2+1):
+                        lines_matrix[y_index][x1] = 1 # Fill with ones
+                if y1 == y2: # Горизонтальная линия
+                    for x_index in range(x1,x2+1):
+                        lines_matrix[y1][x_index] = 1 # Fill with ones
+
+        # Templates for corners, size 3х3
+        top_right_corner_template = np.array([[1,1,1],[0,0,1],[0,0,1]])
+        top_left_corner_template = np.array([[1,1,1],[1,0,0],[1,0,0]])
+        bottom_right_corner_template = np.array([[0,0,1],[0,0,1],[1,1,1]])
+        bottom_left_corner_template = np.array([[1,0,0],[1,0,0],[1,1,1]])
+        corners_templates = {'top_right': top_right_corner_template, 
+                             'top_left': top_left_corner_template, 
+                             'bottom_right': bottom_right_corner_template, 
+                             'bottom_left': bottom_left_corner_template}
+
+        # Bypass matrix of lines with window 3х3
+        top_right_corners = []
+        top_left_corners = []
+        bottom_right_corners = []
+        bottom_left_corners = []
+        for x, y in ((x,y) for x in range(1,len(lines_matrix[0])-1) for y in range(1,len(lines_matrix)-1)):
+            # Get matrix 3х3 with center in x,y
+            # In generator already made indent 1 from image borders
+            # first y (row index), than x (index of element in row)
+            # If lines_matrix[y-1:y+2, x-1:x+2], than empty array lines_matrix[990:100, 890:900]
+            window = np.array([lines_matrix[y-1, x-1:x+2],
+                                lines_matrix[y, x-1:x+2],
+                                lines_matrix[y+1, x-1:x+2]])
+            for name, template in corners_templates.items():
+                if np.array_equal(window, template):
+                    if name == 'top_right':
+                        top_right_corners.append((x,y))
+                    elif name == 'top_left':
+                        top_left_corners.append((x,y))
+                    elif name == 'bottom_right':
+                        bottom_right_corners.append((x,y))
+                    elif name == 'bottom_left':
+                        bottom_left_corners.append((x,y))
+
+        # Coordinates of cells. [0] row numbers (y), [1] column numbers (x), inside 4 corners coordinates
+        # Calclulate amount of rows and columns
+        cells_x = []
+        cells_y = []
+        cells_error = 10 # Presumable error in pixels
+        for top_left_corner in top_left_corners:
+            x_tl, y_tl = top_left_corner
+            x_add = True
+            y_add = True
+            for cell_x in cells_x:
+                if cell_x - cells_error < x_tl < cell_x + cells_error:
+                    # Considering error this x_tl already in list
+                    x_add = False
+            for cell_y in cells_y:
+                if cell_y - cells_error < y_tl < cell_y + cells_error:
+                    # Considering error this y_tl already in list
+                    y_add = False
+            if x_add:
+                cells_x.append(x_tl)
+            if y_add:
+                cells_y.append(y_tl)
+        cells_rows = len(cells_y)    
+        cells_columns = len(cells_x) 
+        # Initialize matrix with rows and columns to fill
+        cells = np.empty((cells_rows, cells_columns), dtype=object) # 17 строк, 3 столбца
+        cells[:] = np.nan
+        for tlc_index in range(len(top_left_corners)):
+            # Coordinates of top left corner
+            x_tl, y_tl = top_left_corners[tlc_index]
+            # Coordinates of top right corner with same <y> and greater <x> as top left corner
+            for top_rigth_corner in top_right_corners:
+                x_tr, y_tr = top_rigth_corner
+                if y_tr == y_tl and x_tr > x_tl:
+                    break
+            # Coordinates of bottom left corner with same <x> and greater <y> as top left corner
+            for bottom_left_corner in bottom_left_corners:
+                x_bl, y_bl = bottom_left_corner
+                if x_bl == x_tl and y_bl > y_tl:
+                    break
+            # Coordinates of bottom left corner by top right and bottom left corners
+            x_br, y_br = x_tr, y_bl
+            # Add cell coordinates to cell matrix
+            cells[tlc_index % cells_rows, tlc_index // cells_rows] = ((x_tl, y_tl), (x_tr, y_tr), (x_bl, y_bl), (x_br, y_br))
+        
+        # Skip <skiprows> rows as table header
+        cells = cells[skiprows:]
+        # Choose columns <num_col>
+        cells = cells[:,num_col-1]
+        
+        visualize = False
+        if visualize:
+            # Draw cells
+            for cell in cells:
+                (x_tl, y_tl), (x_tr, y_tr), (x_bl, y_bl), (x_br, y_br) = cell
+                cv2.line(image, (x_tl, y_tl), (x_tr, y_tr), (0, 0, 255), 2) # top edge
+                cv2.line(image, (x_bl, y_bl), (x_br, y_br), (0, 0, 255), 2) # bottom edge
+                cv2.line(image, (x_tl, y_tl), (x_bl, y_bl), (0, 0, 255), 2) # left edge
+                cv2.line(image, (x_tr, y_tr), (x_br, y_br), (0, 0, 255), 2) # right edge
+            cv2.imshow('Cells Detected', image)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
+            
+        return cells
+        
+
+    def ocr_image(self, image):
+        '''
+        OCR one image with Paddleocr
+        Paddleocr supports Chinese, English, French, German, Korean and Japanese.
+        You can set the parameter `lang` as `ch`, `en`, `fr`, `german`, `korean`, `japan`
+        to switch the language model in order.
+        English model works better for recognising numbers in my tests.
+        cls: use angle classifier or not. Default is True. If true, the text with rotation of 180 degrees can be recognized. 
+        If no text is rotated by 180 degrees, use cls=False to get better performance. Text with rotation of 90 or 270 degrees can be recognized even if cls=False.
+
+        Parameters
+        ----------
+        image : numpy.ndarray
+            ndarray of image.
+
+        Returns
+        -------
+        result_dict : dictionary
+            values (text) of image with recognition scores.
+
+        '''
+
+        
+        #my_rec_char_dict_path = './permitted_chars.txt' # , rec_char_dict_path=my_rec_char_dict_path
+        ocr = PaddleOCR(use_angle_cls=False, lang='en') # need to run only once to download and load model into memory
+        result = ocr.ocr(image, cls=True)
+        result_dict = {}
+        if len(result) == 1:
+            line = result[0][0]
+            result_dict.update({'value': line[1][0], 'score': line[1][1]})
+        else:
+            for idx in range(len(result)):
+                line = result[idx]
+                result_dict.update({idx: {'value': line[1][0], 'score': line[1][1]}})
+        
+        return result_dict
+
+    def ocr_table(self, image, skiprows=0, num_col=1):
+        '''
+        Process OCR on table
+
+        Parameters
+        ----------
+        image : numpy.ndarray
+            ndarray of image.
+        skiprows : integer, optional
+            How many rows skip for header (not include in result). The default is 0.
+        num_col : integer, optional
+            Whick column contains numbers. The default is 1.
+
+        Returns
+        -------
+        table_result : dictionary
+            Values (text) in cells.
+
+        '''
+        cells = self.find_cells(image, skiprows, num_col)
+        indent = 10
+        table_result = {}
+        for cell_idx in range(len(cells)):
+            (x_tl, y_tl), (x_tr, y_tr), (x_bl, y_bl), (x_br, y_br) = cells[cell_idx]
+            cell_image = image[y_tl+indent:y_bl-indent, x_tl+indent:x_tr-indent]
+            cell_chars = self.ocr_image(cell_image)
+            table_result.update({cell_idx: cell_chars})
+            
+        return table_result
