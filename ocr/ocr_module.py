@@ -32,7 +32,7 @@ class OCR_doc():
         image = cv2.imread(path) # './examples/hw_all.jpg'
         return image
 
-    def find_cells(self, image, skiprows=0, num_col=1):
+    def find_cells(self, image, skiprows=0, num_col=1, key_col=None):
         '''
         Find cells with numbers (by known column and rows)
 
@@ -186,11 +186,6 @@ class OCR_doc():
             # Add cell coordinates to cell matrix
             cells[tlc_index % cells_rows, tlc_index // cells_rows] = ((x_tl, y_tl), (x_tr, y_tr), (x_bl, y_bl), (x_br, y_br))
         
-        # Skip <skiprows> rows as table header
-        cells = cells[skiprows:]
-        # Choose columns <num_col>
-        cells = cells[:,num_col-1]
-        
         visualize = False
         if visualize:
             # Draw cells
@@ -203,8 +198,19 @@ class OCR_doc():
             cv2.imshow('Cells Detected', image)
             cv2.waitKey(0)
             cv2.destroyAllWindows()
+        
+        # Skip <skiprows> rows as table header
+        cells = cells[skiprows:]
+        # Choose columns <num_col>
+        num_cells = cells[:,num_col-1]
+        
+        # Choose column <key_col>, where id located
+        if key_col:
+            key_cells = cells[:,key_col-1]
+        else:
+            key_cells = None
             
-        return cells
+        return {'num_cells': num_cells, 'key_cells': key_cells}
         
 
     def ocr_image(self, image):
@@ -244,7 +250,7 @@ class OCR_doc():
         
         return result_dict
 
-    def ocr_table(self, image, skiprows=0, num_col=1):
+    def ocr_table(self, image, skiprows=0, num_col=1, key_col=None):
         '''
         Process OCR on table
 
@@ -263,13 +269,25 @@ class OCR_doc():
             Values (text) in cells.
 
         '''
-        cells = self.find_cells(image, skiprows, num_col)
+        cells = self.find_cells(image, skiprows, num_col, key_col)
+        num_cells = cells['num_cells']
+        if cells['key_cells'] is not None:
+            key_cells = cells['key_cells']
+        else:
+            key_cells = None
         indent = 10
         table_result = {}
-        for cell_idx in range(len(cells)):
-            (x_tl, y_tl), (x_tr, y_tr), (x_bl, y_bl), (x_br, y_br) = cells[cell_idx]
+        for cell_idx in range(len(num_cells)):
+            (x_tl, y_tl), (x_tr, y_tr), (x_bl, y_bl), (x_br, y_br) = num_cells[cell_idx]
             cell_image = image[y_tl+indent:y_bl-indent, x_tl+indent:x_tr-indent]
             cell_chars = self.ocr_image(cell_image)
-            table_result.update({cell_idx: cell_chars})
+            # OCR id for cell
+            if key_cells is not None:
+                (xkey_tl, ykey_tl), (xkey_tr, ykey_tr), (xkey_bl, ykey_bl), (xkey_br, ykey_br) = key_cells[cell_idx]
+                key_image = image[ykey_tl+indent:ykey_bl-indent, xkey_tl+indent:xkey_tr-indent]
+                key_chars = self.ocr_image(key_image)['value'] # Only value
+            else:
+                key_chars = cell_idx
+            table_result.update({key_chars: cell_chars})
             
         return table_result
