@@ -244,11 +244,11 @@ class OCR_doc():
             result_dict.update({'value': None, 'score': None})
         elif len(result) == 1:
             line = result[0][0]
-            result_dict.update({'value': line[1][0], 'score': line[1][1]})
+            result_dict.update({'value': line[1][0], 'score': round(line[1][1],4)})
         else:
             for idx in range(len(result)):
                 line = result[idx]
-                result_dict.update({idx: {'value': line[1][0], 'score': line[1][1]}})
+                result_dict.update({idx: {'value': line[1][0], 'score': round(line[1][1],4)}})
         
         return result_dict
 
