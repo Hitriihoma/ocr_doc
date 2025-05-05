@@ -240,7 +240,9 @@ class OCR_doc():
         ocr = PaddleOCR(use_angle_cls=False, lang='en') # need to run only once to download and load model into memory
         result = ocr.ocr(image, cls=True)
         result_dict = {}
-        if len(result) == 1:
+        if result == [None]:
+            result_dict.update({'value': None, 'score': None})
+        elif len(result) == 1:
             line = result[0][0]
             result_dict.update({'value': line[1][0], 'score': line[1][1]})
         else:
