@@ -283,11 +283,17 @@ class OCR_doc():
 
         '''
         
+        min_size = 10
         (x_tl, y_tl), (x_tr, y_tr), (x_bl, y_bl), (x_br, y_br) = cell
-        cell_image = image[y_tl+indent:y_bl-indent, x_tl+indent:x_tr-indent]
-        cell_chars = self.ocr_image(cell_image)
+        if (y_bl - y_tl - 2*indent > min_size) and (x_tr - x_tl - 2*indent > min_size):
+            cell_image = image[y_tl+indent:y_bl-indent, x_tl+indent:x_tr-indent]
+            cell_chars = self.ocr_image(cell_image)
+            return cell_chars
+        else:
+            # Cell too small to ocr
+            return {'value': None, 'score': 0}
         
-        return cell_chars
+        
 
     def ocr_table(self, doc):
         '''
