@@ -5,23 +5,17 @@ Created on Sat May  3 15:08:35 2025
 @author: Hitriihoma (hitriihoma@gmail.com, https://github.com/Hitriihoma)
 """
 
-from ocr.ocr_module import OCR_doc
+from ocr.ocr_module import OCR_doc, Table
 
-def main(insert_image, skiprows, num_column, key_column):
+def main(doc, insert_image):
+    doc.load_image(insert_image)
     HOCR = OCR_doc()
-    image = HOCR.load_image(insert_image)
-    table = HOCR.ocr_table(image, skiprows, num_column, key_column)
+    table = HOCR.ocr_table(doc)
     
     return table
     
 if __name__ == "__main__":
+    doc = Table(skiprows=0, num_col=2, key_col=None)
     insert_image = input('Insert path to image: ') # './tests/examples/hw_1.jpg'
-    skiprows = int(input('How many rows to skip: ')) # 0
-    num_column = int(input('Which column contains numbers, start with 1: ')) # 2
-    key_column = input('Which column contains keys, start with 1, or None: ') # None
-    if key_column != 'None':
-        key_column = int(key_column)
-    else:
-        key_column = None
-    table = main(insert_image, skiprows, num_column, key_column)
-    print(table)
+    ocr_table = main(doc, insert_image)
+    print(ocr_table)

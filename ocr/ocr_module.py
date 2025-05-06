@@ -252,7 +252,7 @@ class OCR_doc():
         
         return result_dict
 
-    def ocr_table(self, image, skiprows=0, num_col=1, key_col=None):
+    def ocr_table(self, doc):
         '''
         Process OCR on table
 
@@ -271,6 +271,10 @@ class OCR_doc():
             Values (text) in cells.
 
         '''
+        image = doc.image
+        skiprows = doc.skiprows
+        num_col = doc.num_col
+        key_col = doc.key_col
         cells = self.find_cells(image, skiprows, num_col, key_col)
         num_cells = cells['num_cells']
         if cells['key_cells'] is not None:
@@ -293,3 +297,30 @@ class OCR_doc():
             table_result.update({key_chars: cell_chars})
             
         return table_result
+    
+class Table():
+    def __init__(self, skiprows, num_col, key_col=None):
+        self.skiprows = skiprows
+        self.num_col = num_col
+        self.key_col = key_col
+        
+    def load_image(self, path):
+        '''
+        Load image to ndarray format and set <image> attribute
+
+        Parameters
+        ----------
+        path : string
+            Path to image file.
+
+        Returns
+        -------
+        image : numpy.ndarray
+            ndarray of image.
+
+        '''
+        # Load the image
+        self.image = cv2.imread(path) # './examples/hw_all.jpg'
+    
+    def get_image(self):
+        return self.image
