@@ -238,7 +238,7 @@ class OCR_doc():
         
         #my_rec_char_dict_path = './permitted_chars.txt' # , rec_char_dict_path=my_rec_char_dict_path
         ocr = PaddleOCR(use_angle_cls=False, lang='en') # need to run only once to download and load model into memory
-        result = ocr.ocr(image, cls=True)
+        result = ocr.ocr(image, cls=False)
         result_dict = {}
         if result == [None]:
             result_dict.update({'value': None, 'score': None})
