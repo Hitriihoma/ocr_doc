@@ -190,11 +190,14 @@ class OCR_doc():
         if visualize:
             # Draw cells
             for cell in cells:
-                (x_tl, y_tl), (x_tr, y_tr), (x_bl, y_bl), (x_br, y_br) = cell
-                cv2.line(image, (x_tl, y_tl), (x_tr, y_tr), (0, 0, 255), 2) # top edge
-                cv2.line(image, (x_bl, y_bl), (x_br, y_br), (0, 0, 255), 2) # bottom edge
-                cv2.line(image, (x_tl, y_tl), (x_bl, y_bl), (0, 0, 255), 2) # left edge
-                cv2.line(image, (x_tr, y_tr), (x_br, y_br), (0, 0, 255), 2) # right edge
+                try:
+                    (x_tl, y_tl), (x_tr, y_tr), (x_bl, y_bl), (x_br, y_br) = cell[0]
+                    cv2.line(image, (x_tl, y_tl), (x_tr, y_tr), (0, 0, 255), 2) # top edge
+                    cv2.line(image, (x_bl, y_bl), (x_br, y_br), (0, 0, 255), 2) # bottom edge
+                    cv2.line(image, (x_tl, y_tl), (x_bl, y_bl), (0, 0, 255), 2) # left edge
+                    cv2.line(image, (x_tr, y_tr), (x_br, y_br), (0, 0, 255), 2) # right edge
+                except Exception as e:
+                    print(e, 'in draw cell:', cell)
             cv2.imshow('Cells Detected', image)
             cv2.waitKey(0)
             cv2.destroyAllWindows()
