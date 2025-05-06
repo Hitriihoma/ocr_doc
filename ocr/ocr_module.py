@@ -262,6 +262,32 @@ class OCR_doc():
                 result_dict.update({idx: {'value': line[1][0], 'score': round(line[1][1],4)}})
         
         return result_dict
+    
+    def ocr_cell(self, image, cell, indent):
+        '''
+        Make ocr_image on specific cell in image
+
+        Parameters
+        ----------
+        image : numpy.ndarray
+            ndarray of image.
+        cell : list of int
+            List of cell corners coordinates.
+        indent : integer
+            Indent for step inside cell from corners.
+
+        Returns
+        -------
+        cell_chars : dictionary
+            Dictionary of {value, score}. Values (text) of image with recognition scores.
+
+        '''
+        
+        (x_tl, y_tl), (x_tr, y_tr), (x_bl, y_bl), (x_br, y_br) = cell
+        cell_image = image[y_tl+indent:y_bl-indent, x_tl+indent:x_tr-indent]
+        cell_chars = self.ocr_image(cell_image)
+        
+        return cell_chars
 
     def ocr_table(self, doc):
         '''
@@ -305,27 +331,19 @@ class OCR_doc():
         indent = 10
         table_result = {}
         for cell_idx in range(len(num_cells)):
-            (x_tl, y_tl), (x_tr, y_tr), (x_bl, y_bl), (x_br, y_br) = num_cells[cell_idx]
-            cell_image = image[y_tl+indent:y_bl-indent, x_tl+indent:x_tr-indent]
-            cell_chars = self.ocr_image(cell_image)
+            cell_chars = self.ocr_cell(image, num_cells[cell_idx], indent)['value'] # Only value
             # OCR id for cell
             if key_cells is not None:
-                (xkey_tl, ykey_tl), (xkey_tr, ykey_tr), (xkey_bl, ykey_bl), (xkey_br, ykey_br) = key_cells[cell_idx]
-                key_image = image[ykey_tl+indent:ykey_bl-indent, xkey_tl+indent:xkey_tr-indent]
-                key_chars = self.ocr_image(key_image)['value'] # Only value
+                key_chars = self.ocr_cell(image, key_cells[cell_idx], indent)['value'] # Only value
             else:
                 key_chars = cell_idx
             table_result.update({key_chars: cell_chars})
         if h1_cell is not None:
-            (x_tl, y_tl), (x_tr, y_tr), (x_bl, y_bl), (x_br, y_br) = h1_cell
-            cell_image = image[y_tl+indent:y_bl-indent, x_tl+indent:x_tr-indent]
-            cell_chars = self.ocr_image(cell_image)
-            table_result.update({'h1': cell_chars})
+            h1_chars = self.ocr_cell(image, h1_cell, indent)['value'] # Only value
+            table_result.update({'h1': h1_chars})
         if h2_cell is not None:
-            (x_tl, y_tl), (x_tr, y_tr), (x_bl, y_bl), (x_br, y_br) = h2_cell
-            cell_image = image[y_tl+indent:y_bl-indent, x_tl+indent:x_tr-indent]
-            cell_chars = self.ocr_image(cell_image)
-            table_result.update({'h2': cell_chars})
+            h2_chars = self.ocr_cell(image, h2_cell, indent)['value'] # Only value
+            table_result.update({'h2': h2_chars})
             
         return table_result
     
