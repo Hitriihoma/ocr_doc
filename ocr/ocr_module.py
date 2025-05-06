@@ -32,7 +32,7 @@ class OCR_doc():
         image = cv2.imread(path) # './examples/hw_all.jpg'
         return image
 
-    def find_cells(self, image, skiprows=0, num_col=1, key_col=None):
+    def find_cells(self, image, skiprows=0, num_col=1, key_col=None, h1=[None, None], h2=[None, None]):
         '''
         Find cells with numbers (by known column and rows)
 
@@ -210,7 +210,18 @@ class OCR_doc():
         else:
             key_cells = None
             
-        return {'num_cells': num_cells, 'key_cells': key_cells}
+        # Choose cell for header 1
+        if h1[0] is not None and h1[1] is not None:
+            h1_cell = cells[h1[0]-1,h1[1]-1]
+        else:
+            h1_cell = [None,None]
+        # Choose cell for header 2
+        if h2[0] is not None and h2[1] is not None:
+            h2_cell = cells[h2[0]-1,h2[1]-1]
+        else:
+            h2_cell = [None,None]
+            
+        return {'num_cells': num_cells, 'key_cells': key_cells, 'h1_cell': h1_cell, 'h2_cell': h2_cell}
         
 
     def ocr_image(self, image):
@@ -275,12 +286,22 @@ class OCR_doc():
         skiprows = doc.skiprows
         num_col = doc.num_col
         key_col = doc.key_col
-        cells = self.find_cells(image, skiprows, num_col, key_col)
+        h1 = doc.h1
+        h2 = doc.h2
+        cells = self.find_cells(image, skiprows, num_col, key_col, h1, h2)
         num_cells = cells['num_cells']
         if cells['key_cells'] is not None:
             key_cells = cells['key_cells']
         else:
             key_cells = None
+        if cells['h1_cell'][0] is not None and cells['h1_cell'][1] is not None:
+            h1_cell = cells['h1_cell']
+        else:
+            h1_cell = None
+        if cells['h2_cell'][0] is not None and cells['h2_cell'][1] is not None:
+            h2_cell = cells['h2_cell']
+        else:
+            h2_cell = None
         indent = 10
         table_result = {}
         for cell_idx in range(len(num_cells)):
@@ -295,14 +316,26 @@ class OCR_doc():
             else:
                 key_chars = cell_idx
             table_result.update({key_chars: cell_chars})
+        if h1_cell is not None:
+            (x_tl, y_tl), (x_tr, y_tr), (x_bl, y_bl), (x_br, y_br) = h1_cell
+            cell_image = image[y_tl+indent:y_bl-indent, x_tl+indent:x_tr-indent]
+            cell_chars = self.ocr_image(cell_image)
+            table_result.update({'h1': cell_chars})
+        if h2_cell is not None:
+            (x_tl, y_tl), (x_tr, y_tr), (x_bl, y_bl), (x_br, y_br) = h2_cell
+            cell_image = image[y_tl+indent:y_bl-indent, x_tl+indent:x_tr-indent]
+            cell_chars = self.ocr_image(cell_image)
+            table_result.update({'h2': cell_chars})
             
         return table_result
     
 class Table():
-    def __init__(self, skiprows, num_col, key_col=None):
+    def __init__(self, skiprows, num_col, key_col=None, h1=[None,None], h2=[None,None]):
         self.skiprows = skiprows
         self.num_col = num_col
         self.key_col = key_col
+        self.h1 = h1
+        self.h2 = h2
         
     def load_image(self, path):
         '''
