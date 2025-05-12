@@ -21,7 +21,7 @@ if __name__ == "__main__":
         doc = Table(skiprows=0, num_col=2, key_col=None, h1=[None,None]
         insert_image = './tests/examples/hw_1.jpg'
     structure_1:
-        doc = Table(skiprows=2, num_col=3, key_col=1, h1=[1,2], h2=[2,2])
+        doc = Table(skiprows=2, num_col=3, key_col=1, h1=[2,1], h2=[2,2])
         insert_image = './tests/examples/structure_1.jpg'
     '''
     doc = Table(skiprows=0, num_col=2, key_col=None, h1=[None,None], h2=[None,None])

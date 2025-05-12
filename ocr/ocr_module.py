@@ -219,12 +219,12 @@ class OCR_doc():
         
         # Choose cell for header 1
         if h1[0] is not None and h1[1] is not None:
-            h1_cell = cells[h1[0]-1,h1[1]-1]
+            h1_cell = cells[h1[1]-1,h1[0]-1]
         else:
             h1_cell = [None,None]
         # Choose cell for header 2
         if h2[0] is not None and h2[1] is not None:
-            h2_cell = cells[h2[0]-1,h2[1]-1]
+            h2_cell = cells[h2[1]-1,h2[0]-1]
         else:
             h2_cell = [None,None]
         # Skip <skiprows> rows as table header
