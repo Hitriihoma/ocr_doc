@@ -217,17 +217,6 @@ class OCR_doc():
             # Add cell coordinates to cell matrix
             cells[tlc_index % cells_rows, tlc_index // cells_rows] = ((x_tl, y_tl), (x_tr, y_tr), (x_bl, y_bl), (x_br, y_br))
         
-        # Skip <skiprows> rows as table header
-        cells = cells[skiprows:]
-        # Choose columns <num_col>
-        num_cells = cells[:,num_col-1]
-        
-        # Choose column <key_col>, where id located
-        if key_col:
-            key_cells = cells[:,key_col-1]
-        else:
-            key_cells = None
-            
         # Choose cell for header 1
         if h1[0] is not None and h1[1] is not None:
             h1_cell = cells[h1[0]-1,h1[1]-1]
@@ -238,6 +227,15 @@ class OCR_doc():
             h2_cell = cells[h2[0]-1,h2[1]-1]
         else:
             h2_cell = [None,None]
+        # Skip <skiprows> rows as table header
+        cells = cells[skiprows:]
+        # Choose columns <num_col>
+        num_cells = cells[:,num_col-1]
+        # Choose column <key_col>, where id located
+        if key_col:
+            key_cells = cells[:,key_col-1]
+        else:
+            key_cells = None
             
         return {'num_cells': num_cells, 'key_cells': key_cells, 'h1_cell': h1_cell, 'h2_cell': h2_cell}
         
