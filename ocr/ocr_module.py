@@ -31,7 +31,7 @@ class OCR_doc():
         # Load the image
         image = cv2.imread(path) # './examples/hw_all.jpg'
         return image
-
+    
     def find_cells(self, image, skiprows=0, num_col=1, key_col=None, h1=[None, None], h2=[None, None]):
         '''
         Find cells with numbers (by known column and rows)
@@ -51,6 +51,37 @@ class OCR_doc():
             Array of cells coordinates.
 
         '''
+        def visualize_cells(image, cells):
+            '''
+            Service functions for visualize cells on image with red rectangles
+
+            Parameters
+            ----------
+            image : numpy.ndarray
+                ndarray of image.
+            cells : numpy.ndarray
+                Array of cells coordinates.
+
+            Returns
+            -------
+            None.
+
+            '''
+            # Draw cells
+            for cells_row in cells:
+                for cell in cells_row:
+                    try:
+                        (x_tl, y_tl), (x_tr, y_tr), (x_bl, y_bl), (x_br, y_br) = cell
+                        cv2.line(image, (x_tl, y_tl), (x_tr, y_tr), (0, 0, 255), 2) # top edge
+                        cv2.line(image, (x_bl, y_bl), (x_br, y_br), (0, 0, 255), 2) # bottom edge
+                        cv2.line(image, (x_tl, y_tl), (x_bl, y_bl), (0, 0, 255), 2) # left edge
+                        cv2.line(image, (x_tr, y_tr), (x_br, y_br), (0, 0, 255), 2) # right edge
+                    except Exception as e:
+                        print(e, 'in draw cell:', cell)
+            cv2.imshow('Cells Detected', image)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
+            
         # Load the image
         #image = cv2.imread('./tests/examples/hw_1.jpg')
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -185,22 +216,6 @@ class OCR_doc():
             x_br, y_br = x_tr, y_bl
             # Add cell coordinates to cell matrix
             cells[tlc_index % cells_rows, tlc_index // cells_rows] = ((x_tl, y_tl), (x_tr, y_tr), (x_bl, y_bl), (x_br, y_br))
-        
-        visualize = False
-        if visualize:
-            # Draw cells
-            for cell in cells:
-                try:
-                    (x_tl, y_tl), (x_tr, y_tr), (x_bl, y_bl), (x_br, y_br) = cell[0]
-                    cv2.line(image, (x_tl, y_tl), (x_tr, y_tr), (0, 0, 255), 2) # top edge
-                    cv2.line(image, (x_bl, y_bl), (x_br, y_br), (0, 0, 255), 2) # bottom edge
-                    cv2.line(image, (x_tl, y_tl), (x_bl, y_bl), (0, 0, 255), 2) # left edge
-                    cv2.line(image, (x_tr, y_tr), (x_br, y_br), (0, 0, 255), 2) # right edge
-                except Exception as e:
-                    print(e, 'in draw cell:', cell)
-            cv2.imshow('Cells Detected', image)
-            cv2.waitKey(0)
-            cv2.destroyAllWindows()
         
         # Skip <skiprows> rows as table header
         cells = cells[skiprows:]
