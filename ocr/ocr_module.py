@@ -240,9 +240,9 @@ class OCR_doc():
         return {'num_cells': num_cells, 'key_cells': key_cells, 'h1_cell': h1_cell, 'h2_cell': h2_cell}
         
 
-    def ocr_image(self, image):
+    def ocr_image_number(self, image):
         '''
-        OCR one image with Paddleocr
+        OCR one image with number using Paddleocr
         Paddleocr supports Chinese, English, French, German, Korean and Japanese.
         You can set the parameter `lang` as `ch`, `en`, `fr`, `german`, `korean`, `japan`
         to switch the language model in order.
@@ -261,7 +261,25 @@ class OCR_doc():
             values (text) of image with recognition scores.
 
         '''
+        def comma_to_dot(input_value):
+            '''
+            If value contains ',', replace it to '.' for cast to number
 
+            Parameters
+            ----------
+            input_value : string
+                String, which may contain , like 123,456.
+
+            Returns
+            -------
+            string
+                String where , replaced with .
+
+            '''
+            if ',' in input_value and type(input_value) == str:
+                return input_value.replace(',', '.')
+            else:
+                return input_value
         
         my_rec_char_dict_path = './ocr/permitted_chars.txt' # , rec_char_dict_path=my_rec_char_dict_path
         ocr = PaddleOCR(use_angle_cls=False, lang='en', show_log = False, rec_char_dict_path=my_rec_char_dict_path) # need to run only once to download and load model into memory
@@ -271,11 +289,11 @@ class OCR_doc():
             result_dict.update({'value': None, 'score': None})
         elif len(result) == 1:
             line = result[0][0]
-            result_dict.update({'value': line[1][0], 'score': round(line[1][1],4)})
+            result_dict.update({'value': comma_to_dot(line[1][0]), 'score': round(line[1][1],4)})
         else:
             for idx in range(len(result)):
                 line = result[idx]
-                result_dict.update({idx: {'value': line[1][0], 'score': round(line[1][1],4)}})
+                result_dict.update({idx: {'value': comma_to_dot(line[1][0]), 'score': round(line[1][1],4)}})
         
         return result_dict
     
@@ -303,7 +321,7 @@ class OCR_doc():
         (x_tl, y_tl), (x_tr, y_tr), (x_bl, y_bl), (x_br, y_br) = cell
         if (y_bl - y_tl - 2*indent > min_size) and (x_tr - x_tl - 2*indent > min_size):
             cell_image = image[y_tl+indent:y_bl-indent, x_tl+indent:x_tr-indent]
-            cell_chars = self.ocr_image(cell_image)
+            cell_chars = self.ocr_image_number(cell_image)
             return cell_chars
         else:
             # Cell too small to ocr
