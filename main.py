@@ -9,22 +9,28 @@ from ocr.ocr_module import OCR_doc, Table
 from fastapi import FastAPI
 from fastapi.encoders import jsonable_encoder
 from pydantic import BaseModel
+from typing import Optional
 import uvicorn
 
 app = FastAPI()
 
 class OcrInput(BaseModel):
     img_path: str
-    structure: dict
+    structure: Optional[dict] = None
 
 @app.post("/ocr")
 async def ocr_doc(insert_json: OcrInput):
     insert_image = insert_json.img_path
-    doc = Table(skiprows=insert_json.structure['skiprows']
-                , num_col=insert_json.structure['num_col']
-                , key_col=insert_json.structure['key_col']
-                , h1=insert_json.structure['h1']
-                , h2=insert_json.structure['h2'])
+    # Check if there is optional field:structure in insert_json
+    if insert_json.structure is not None:
+        doc = Table(skiprows=insert_json.structure['skiprows']
+                    , num_col=insert_json.structure['num_col']
+                    , key_col=insert_json.structure['key_col']
+                    , h1=insert_json.structure['h1']
+                    , h2=insert_json.structure['h2'])
+    else:
+        # Base structure
+        doc = Table(skiprows=2, num_col=3, key_col=1, h1=[2,1], h2=[2,2])
     doc.load_image(insert_image)
     ocr = OCR_doc()
     table = ocr.ocr_table(doc)
@@ -33,3 +39,4 @@ async def ocr_doc(insert_json: OcrInput):
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
