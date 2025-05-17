@@ -7,6 +7,13 @@ Created on Thu May 15 22:10:17 2025
 
 import requests
 
+response_hw_1_basestructure = requests.post(
+    url="http://localhost:8000/ocr",
+    json={"img_path": "./tests/examples/structure_1.jpg"}
+          )
+print(response_hw_1_basestructure.json())  
+# Output: 
+# {0: '1234567890', 1: '3456789012', 2: '123.456', 3: '123.456', 4: '0.01', 5: '0.01', 6: '1234567890', 7: '1234567890', 8: '1234567890', 9: '1234567890'}
 
 response_hw_1 = requests.post(
     url="http://localhost:8000/ocr",
@@ -18,7 +25,6 @@ response_hw_1 = requests.post(
                           , "h2": [None,None]
                           }
           })
-
 print(response_hw_1.json())  
 # Output: 
 # {0: '1234567890', 1: '3456789012', 2: '123.456', 3: '123.456', 4: '0.01', 5: '0.01', 6: '1234567890', 7: '1234567890', 8: '1234567890', 9: '1234567890'}
