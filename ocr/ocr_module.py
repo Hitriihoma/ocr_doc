@@ -393,7 +393,7 @@ class OCR_doc():
         indent = 10
         table_result = {}
         for cell_idx in range(len(num_cells)):
-            cell_chars = self.ocr_cell(image, num_cells[cell_idx], indent)['value'] # Only value
+            cell_chars = self.ocr_cell(image, num_cells[cell_idx], indent) # {'value': value, 'score': score, 'is_number': is_number} 
             # OCR id for cell
             if key_cells is not None:
                 key_chars = self.ocr_cell(image, key_cells[cell_idx], indent)['value'] # Only value
