@@ -281,19 +281,41 @@ class OCR_doc():
             else:
                 return input_value
         
+        def check_number(input_value):
+            '''
+            Check if string is valid number
+
+            Parameters
+            ----------
+            input_value : string
+                String, whick need to check whether it is number.
+
+            Returns
+            -------
+            Bool
+                True if string is number, False if string is not number.
+
+            ''' 
+            if input_value[0] == '-': # If a negative number
+                return input_value[1:].replace('.','',1).isdigit()
+            else:
+              return input_value.replace('.','',1).isdigit()
+        
         my_rec_char_dict_path = './ocr/permitted_chars.txt' # , rec_char_dict_path=my_rec_char_dict_path
         ocr = PaddleOCR(use_angle_cls=False, lang='en', show_log = False, rec_char_dict_path=my_rec_char_dict_path) # need to run only once to download and load model into memory
         result = ocr.ocr(image, cls=False)
         result_dict = {}
         if result == [None]:
-            result_dict.update({'value': None, 'score': None})
+            result_dict.update({'value': None, 'score': None, 'is_number': False})
         elif len(result) == 1:
             line = result[0][0]
-            result_dict.update({'value': comma_to_dot(line[1][0]), 'score': round(line[1][1],4)})
+            result_value = comma_to_dot(line[1][0])
+            result_dict.update({'value': result_value, 'score': round(line[1][1],4), 'is_number': check_number(result_value)})
         else:
             for idx in range(len(result)):
                 line = result[idx]
-                result_dict.update({idx: {'value': comma_to_dot(line[1][0]), 'score': round(line[1][1],4)}})
+                result_value = comma_to_dot(line[1][0])
+                result_dict.update({idx: {'value': result_value, 'score': round(line[1][1],4), 'is_number': check_number(result_value)}})
         
         return result_dict
     
