@@ -357,12 +357,8 @@ class OCR_doc():
 
         Parameters
         ----------
-        image : numpy.ndarray
-            ndarray of image.
-        skiprows : integer, optional
-            How many rows skip for header (not include in result). The default is 0.
-        num_col : integer, optional
-            Whick column contains numbers. The default is 1.
+        doc : Table()
+            Object of class Table with structure and ndarray of image.
 
         Returns
         -------
