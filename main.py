@@ -30,7 +30,7 @@ async def ocr_doc(insert_json: OcrInput):
                     , h2=insert_json.structure['h2'])
     else:
         # Base structure
-        doc = Table(skiprows=2, num_col=3, key_col=1, h1=[2,1], h2=[2,2])
+        doc = Table().get_base_structure(struct_type='full')
     doc.load_image(insert_image)
     ocr = OCR_doc()
     table = ocr.ocr_table(doc)
