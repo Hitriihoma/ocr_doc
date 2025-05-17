@@ -437,3 +437,11 @@ class Table():
     
     def get_image(self):
         return self.image
+    
+    def get_base_structure(self, struct_type='full'):
+        if struct_type == 'simple':
+            return Table(skiprows=0, num_col=2, key_col=None, h1=[None, None], h2=[None, None])
+        elif struct_type == 'full':
+            return Table(skiprows=2, num_col=3, key_col=1, h1=[2, 1], h2=[2, 2])
+        else:
+            raise ValueError("Base structure type must be 'simple' or 'full'")
