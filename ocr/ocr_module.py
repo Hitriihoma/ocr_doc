@@ -439,6 +439,25 @@ class Table():
         return self.image
     
     def get_base_structure(self, struct_type='full'):
+        '''
+        Git basic table structure
+
+        Parameters
+        ----------
+        struct_type : string, optional
+            Description of table structure. The default is 'full'.
+
+        Raises
+        ------
+        ValueError
+            If struct_type not valid.
+
+        Returns
+        -------
+        Table()
+            Basic table structure.
+
+        '''
         if struct_type == 'simple':
             return Table(skiprows=0, num_col=2, key_col=None, h1=[None, None], h2=[None, None])
         elif struct_type == 'full':
