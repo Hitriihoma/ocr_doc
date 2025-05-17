@@ -410,7 +410,7 @@ class OCR_doc():
         return table_result
     
 class Table():
-    def __init__(self, skiprows, num_col, key_col=None, h1=[None,None], h2=[None,None]):
+    def __init__(self, skiprows=None, num_col=None, key_col=None, h1=[None,None], h2=[None,None]):
         self.skiprows = skiprows
         self.num_col = num_col
         self.key_col = key_col
