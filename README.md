@@ -14,3 +14,10 @@ ocr/ocr_module/find_cells - find cell coordinates in table
 ocr/ocr_module/ocr_image - process OCR on image  
 ocr/ocr_module/ocr_cell - process OCR image for cell in image  
 ocr/ocr_module/ocr_table - process pipeline of find_cells and ocr_image for table and return formatted table  
+
+# Run server
+
+Change directory to project
+```bash
+uvicorn main:app --reload
+```
