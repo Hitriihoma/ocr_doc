@@ -351,7 +351,7 @@ class OCR_doc():
         
         
 
-    def ocr_table(self, doc):
+    def ocr_table(self, doc, result_info='full'):
         '''
         Process OCR on table
 
@@ -359,6 +359,8 @@ class OCR_doc():
         ----------
         doc : Table()
             Object of class Table with structure and ndarray of image.
+        result_info : string
+            Whick information return in result. 'full' or 'value'
 
         Returns
         -------
@@ -389,7 +391,12 @@ class OCR_doc():
         indent = 10
         table_result = {}
         for cell_idx in range(len(num_cells)):
-            cell_chars = self.ocr_cell(image, num_cells[cell_idx], indent) # {'value': value, 'score': score, 'is_number': is_number} 
+            if result_info == 'full':
+                cell_chars = self.ocr_cell(image, num_cells[cell_idx], indent) # {'value': value, 'score': score, 'is_number': is_number} 
+            elif result_info in ['value', 'values']:
+                cell_chars = self.ocr_cell(image, num_cells[cell_idx], indent)['value'] # Only value 
+            else:
+                raise ValueError("Argument 'result_info' must be one of 'full', 'value' or 'values'")
             # OCR id for cell
             if key_cells is not None:
                 key_chars = self.ocr_cell(image, key_cells[cell_idx], indent)['value'] # Only value
