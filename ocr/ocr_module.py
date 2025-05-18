@@ -239,7 +239,6 @@ class OCR_doc():
             
         return {'num_cells': num_cells, 'key_cells': key_cells, 'h1_cell': h1_cell, 'h2_cell': h2_cell}
         
-
     def ocr_image_number(self, image):
         '''
         OCR one image with number using Paddleocr
@@ -348,8 +347,6 @@ class OCR_doc():
         else:
             # Cell too small to ocr
             return {'value': None, 'score': 0}
-        
-        
 
     def ocr_table(self, doc, result_info='full'):
         '''
