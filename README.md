@@ -19,6 +19,12 @@ uvicorn main:app --reload
 
 To kill server, use process manager
 
+## OCR
+
+Put image to directory on server
+Make POST request with path to image in `image_path`
+For simple structure in result is just dict of values. You can pass arguments for table key, array key and value keys. 
+
 ## Structure
 
 main.py  
