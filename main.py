@@ -17,6 +17,7 @@ app = FastAPI()
 class OcrInput(BaseModel):
     img_path: str
     structure: Optional[dict] = None
+    result_info: Optional[str] = 'full'
 
 @app.post("/ocr")
 async def ocr_doc(insert_json: OcrInput):
@@ -30,10 +31,10 @@ async def ocr_doc(insert_json: OcrInput):
                     , h2=insert_json.structure['h2'])
     else:
         # Base structure
-        doc = Table().get_base_structure(struct_type='full')
+        doc = Table().get_base_structure(struct_type='full')     
     doc.load_image(insert_image)
     ocr = OCR_doc()
-    table = ocr.ocr_table(doc)
+    table = ocr.ocr_table(doc=doc, result_info=insert_json.result_info)
     
     return jsonable_encoder(table)
 
