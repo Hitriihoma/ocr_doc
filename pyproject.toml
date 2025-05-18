@@ -1,0 +1,22 @@
+[project]
+name = "ocr-doc"
+version = "0.1.0"
+description = "Apply OCR (Optical Character Recognition) for printed table with handwritten text"
+authors = [
+    {name = "Hitriihoma",email = "hitriihoma@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi (>=0.115.12)",
+    "pydantic (>=2.11.3)",
+    "uvicorn (>=0.34.2,<0.35.0)",
+    "opencv-python (>=4.11.0.86,<5.0.0.0)",
+    "numpy (>=2.2.5,<3.0.0)",
+    "paddleocr (>=2.10.0,<3.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
