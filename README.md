@@ -3,7 +3,6 @@
 # About The Project
 
 Apply OCR (Optical Character Recognition) for printed table with handwritten text  
-Применение OCR (Оптическое Символьное распознавание) для распечатанной таблицы с рукописным текстом
 
 # Installation
 
