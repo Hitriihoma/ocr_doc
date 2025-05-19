@@ -74,7 +74,7 @@ class OCR_doc():
         h1 : integer, optional
             Which cell contains header 1. The default is [None, None].
         h2 : integer, optional
-            Whick cell contains header 2. The default is [None, None].
+            Which cell contains header 2. The default is [None, None].
         
         Returns
         -------
