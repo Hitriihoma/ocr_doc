@@ -32,6 +32,31 @@ class OCR_doc():
         image = cv2.imread(path) # './examples/hw_all.jpg'
         return image
     
+    def crop_image(self, image, percent=3):
+        """
+        Crop image from edges by <percent> percents
+
+        Parameters
+        ----------
+        image : numpy.ndarray
+            ndarray of image.
+        percent : int, optional
+            How much percents crop from each edge. The default is 3.
+
+        Returns
+        -------
+        image_cropped : numpy.ndarray
+            ndarray of image.
+
+        """
+        
+        indent_x = int(round(image.shape[1]*percent/100, 0))
+        indent_y = int(round(image.shape[0]*percent/100, 0))
+        
+        image_cropped = image[indent_y:image.shape[0]-indent_y, indent_x:image.shape[1]-indent_x]
+        
+        return image_cropped
+    
     def find_cells(self, image, skiprows=0, num_col=1, key_col=None, h1=[None, None], h2=[None, None]):
         '''
         Find cells with numbers (by known column and rows)
@@ -366,6 +391,7 @@ class OCR_doc():
 
         '''
         image = doc.image
+        image = self.crop_image(image, percent=3)
         skiprows = doc.skiprows
         num_col = doc.num_col
         key_col = doc.key_col
