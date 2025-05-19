@@ -68,8 +68,14 @@ class OCR_doc():
         skiprows : integer, optional
             How many rows skip for header (not include in result). The default is 0.
         num_col : integer, optional
-            Whick column contains numbers. The default is 1.
-
+            Which column contains numbers. The default is 1.
+        key_col : integer, optional
+            Which column contains keys for values. The default is None.
+        h1 : integer, optional
+            Which cell contains header 1. The default is [None, None].
+        h2 : integer, optional
+            Whick cell contains header 2. The default is [None, None].
+        
         Returns
         -------
         cells : numpy.ndarray
