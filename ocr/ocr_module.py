@@ -124,51 +124,51 @@ class OCR_doc():
         lines = cv2.HoughLinesP(edges, 1, np.pi/180, 50, minLineLength=200, maxLineGap=10)
         # Examples x1, y1, x2, y2: [[248 1245 248 5]] [[36 622 326 622]]
         # x1=x2, y1>y2; x1<x2, y1=y2
+        if lines is None:
+            return {'error': 'Not found suited lines on image'}
 
         # Find table borders: min adn max x,y
         # Maybe use collections.Counter if there are many border points
         min_x, max_x, min_y, max_y = image.shape[1], 0, image.shape[0], 0 # 923, 0, 1280, 0
-        if lines is not None:
-            for line in lines:
-                x1, y1, x2, y2 = line[0]
-                if max(x1,x2) > max_x:
-                    max_x = max(x1,x2)
-                if min(x1,x2) < min_x:
-                    min_x = min(x1,x2)
-                if max(y1,y2) > max_y:
-                    max_y = max(y1,y2)
-                if min(y1,y2) < min_y:
-                    min_y = min(y1,y2)
+
+        for line in lines:
+            x1, y1, x2, y2 = line[0]
+            if max(x1,x2) > max_x:
+                max_x = max(x1,x2)
+            if min(x1,x2) < min_x:
+                min_x = min(x1,x2)
+            if max(y1,y2) > max_y:
+                max_y = max(y1,y2)
+            if min(y1,y2) < min_y:
+                min_y = min(y1,y2)
                 
         # Extend all lines to table borders
-        if lines is not None:
-            for line_index in range(len(lines)):
-                line = lines[line_index]
-                x1, y1, x2, y2 = line[0]
-                if x1 == x2: # Vertical line
-                    if y1 > min_y:
-                        lines[line_index][0][1] = min_y
-                    if y2 < max_y:
-                        lines[line_index][0][3] = max_y
-                if y1 == y2: # Horizontal line
-                    if x1 > min_x:
-                        lines[line_index][0][0] = min_x
-                    if x2 < max_x:
-                        lines[line_index][0][2] = max_x     
+        for line_index in range(len(lines)):
+            line = lines[line_index]
+            x1, y1, x2, y2 = line[0]
+            if x1 == x2: # Vertical line
+                if y1 > min_y:
+                    lines[line_index][0][1] = min_y
+                if y2 < max_y:
+                    lines[line_index][0][3] = max_y
+            if y1 == y2: # Horizontal line
+                if x1 > min_x:
+                    lines[line_index][0][0] = min_x
+                if x2 < max_x:
+                    lines[line_index][0][2] = max_x     
 
         # Make matrix, where cells filled by lines
         # y: len(image): 1280; x: len(image[0]): 923
         lines_matrix = np.zeros([len(image),len(image[0])]) # Zero matrix
-        if lines is not None:
-            for line_index in range(len(lines)):
-                line = lines[line_index]
-                x1, y1, x2, y2 = line[0] # y is row index, x is element index in row
-                if x1 == x2: # Вертикальная линия
-                    for y_index in range(y1,y2+1):
-                        lines_matrix[y_index][x1] = 1 # Fill with ones
-                if y1 == y2: # Горизонтальная линия
-                    for x_index in range(x1,x2+1):
-                        lines_matrix[y1][x_index] = 1 # Fill with ones
+        for line_index in range(len(lines)):
+            line = lines[line_index]
+            x1, y1, x2, y2 = line[0] # y is row index, x is element index in row
+            if x1 == x2: # Вертикальная линия
+                for y_index in range(y1,y2+1):
+                    lines_matrix[y_index][x1] = 1 # Fill with ones
+            if y1 == y2: # Горизонтальная линия
+                for x_index in range(x1,x2+1):
+                    lines_matrix[y1][x_index] = 1 # Fill with ones
 
         # Templates for corners, size 3х3
         top_right_corner_template = np.array([[1,1,1],[0,0,1],[0,0,1]])
@@ -404,6 +404,8 @@ class OCR_doc():
         h1 = doc.h1
         h2 = doc.h2
         cells = self.find_cells(image, skiprows, num_col, key_col, h1, h2)
+        if 'error' in cells.keys():
+            return {'error': cells['error']}
         num_cells = cells['num_cells']
         if cells['key_cells'] is not None:
             key_cells = cells['key_cells']
@@ -438,7 +440,8 @@ class OCR_doc():
         if h2_cell is not None:
             h2_chars = self.ocr_cell(image, h2_cell, indent)['value'] # Only value
             table_result.update({'h2': h2_chars})
-            
+        table_result.update({'error': False})
+        
         return table_result
     
 class Table():
