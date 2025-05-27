@@ -143,15 +143,16 @@ class OCR_doc():
                 min_y = min(y1,y2)
                 
         # Extend all lines to table borders
+        orientation_thjreshold = 10
         for line_index in range(len(lines)):
             line = lines[line_index]
             x1, y1, x2, y2 = line[0]
-            if x1 == x2: # Vertical line
+            if abs(x1 - x2) < orientation_thjreshold: # Vertical line
                 if y1 > min_y:
                     lines[line_index][0][1] = min_y
                 if y2 < max_y:
                     lines[line_index][0][3] = max_y
-            if y1 == y2: # Horizontal line
+            if abs(y1 - y2) < orientation_thjreshold: # Horizontal line
                 if x1 > min_x:
                     lines[line_index][0][0] = min_x
                 if x2 < max_x:
