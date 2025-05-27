@@ -7,6 +7,7 @@ Created on Sat May  3 14:48:22 2025
 
 import cv2
 import numpy as np
+import copy
 from paddleocr import PaddleOCR
 
 class OCR_doc():
@@ -126,7 +127,6 @@ class OCR_doc():
         # x1=x2, y1>y2; x1<x2, y1=y2
         if lines is None:
             return {'error': 'Not found suited lines on image'}
-
         # Find table borders: min adn max x,y
         # Maybe use collections.Counter if there are many border points
         min_x, max_x, min_y, max_y = image.shape[1], 0, image.shape[0], 0 # 923, 0, 1280, 0
@@ -155,8 +155,58 @@ class OCR_doc():
                 if x1 > min_x:
                     lines[line_index][0][0] = min_x
                 if x2 < max_x:
-                    lines[line_index][0][2] = max_x     
-
+                    lines[line_index][0][2] = max_x    
+                    
+        # Remove lines closer than threshold (choose median)
+        close_threshold = 10
+        lines_processed = np.array([[np.nan,np.nan,np.nan,np.nan]]) # Already processed lines
+        lines_cleared = np.array([[np.nan,np.nan,np.nan,np.nan]])
+        lines = np.unique(lines, axis=0)
+        for line in lines:
+            # If line were processed before, skip it
+            if any(np.equal(line,lines_processed).all(1)):
+                continue
+            if np.isnan(lines_processed).all():
+                lines_processed = line
+            else:
+                lines_processed = np.append(lines_processed, line, axis=0)
+            x1, y1, x2, y2 = line[0]
+            # Choose all lines where two ends are close enough
+            # From all other lines that are not processed
+            compare_lines = copy.copy(lines)
+            compare_lines = [i for i in compare_lines if not any(np.equal(i,lines_processed).all(1))]
+            lines_close = np.array([line[0]]) # Currently processed line
+            for temp_line in compare_lines:
+                xt1, yt1, xt2, yt2 = temp_line[0]
+                if max(abs(xt1-x1), abs(yt1-y1), abs(xt2-x2), abs(yt2-y2)) <= close_threshold:
+                    lines_close = np.append(lines_close, temp_line, axis=0)
+                    # If temp_line is close and not in lines_processed:
+                    if not any(np.equal(temp_line,lines_processed).all(1)):
+                        lines_processed = np.append(lines_processed, temp_line, axis=0)
+            if len(lines_close) > 1:
+                # Found two or more similar lines
+                x1_c = [] # Values of x1 coordinate
+                y1_c = [] # Values of y1 coordinate
+                x2_c = [] # Values of x2 coordinate
+                y2_c = [] # Values of y2 coordinate
+                for line_close in lines_close:
+                    x1, y1, x2, y2 = line_close
+                    x1_c.append(x1)
+                    y1_c.append(y1)
+                    x2_c.append(x2)
+                    y2_c.append(y2)
+                if np.isnan(lines_cleared).all():
+                    lines_cleared = [line]
+                else:
+                    lines_cleared = np.append(lines_cleared, [[[np.median(x1_c), np.median(y1_c), np.median(x2_c), np.median(y2_c)]]], axis=0) # Median line
+            else:
+                if np.isnan(lines_cleared).all():
+                    lines_cleared = [line]
+                else:
+                    lines_cleared = np.append(lines_cleared, [line], axis=0)
+        # Lines variable is newly created lines array
+        lines = copy.copy(lines_cleared).astype(int)
+        
         # Make matrix, where cells filled by lines
         # y: len(image): 1280; x: len(image[0]): 923
         lines_matrix = np.zeros([len(image),len(image[0])]) # Zero matrix
