@@ -58,7 +58,7 @@ class OCR_doc():
         
         return image_cropped
     
-    def find_cells(self, image, skiprows=0, num_col=1, key_col=None, h1=[None, None], h2=[None, None]):
+    def find_cells(self, image, skiprows=0, num_col=1, key_col=None, h1=[None, None], h2=[None, None], method='intersection'):
         '''
         Find cells with numbers (by known column and rows)
 
@@ -76,6 +76,8 @@ class OCR_doc():
             Which cell contains header 1. The default is [None, None].
         h2 : integer, optional
             Which cell contains header 2. The default is [None, None].
+        method : string, optional
+            Method for finding cell coordinates. The default is 'intersection'.
         
         Returns
         -------
@@ -208,96 +210,158 @@ class OCR_doc():
         # Lines variable is newly created lines array
         lines = copy.copy(lines_cleared).astype(int)
         
-        # Make matrix, where cells filled by lines
-        # y: len(image): 1280; x: len(image[0]): 923
-        lines_matrix = np.zeros([len(image),len(image[0])]) # Zero matrix
-        for line_index in range(len(lines)):
-            line = lines[line_index]
-            x1, y1, x2, y2 = line[0] # y is row index, x is element index in row
-            if x1 == x2: # Вертикальная линия
-                for y_index in range(y1,y2+1):
-                    lines_matrix[y_index][x1] = 1 # Fill with ones
-            if y1 == y2: # Горизонтальная линия
-                for x_index in range(x1,x2+1):
-                    lines_matrix[y1][x_index] = 1 # Fill with ones
+        if method == 'scan':
+            # Make matrix, where cells filled by lines
+            # y: len(image): 1280; x: len(image[0]): 923
+            lines_matrix = np.zeros([len(image),len(image[0])]) # Zero matrix
+            if lines is not None:
+                for line_index in range(len(lines)):
+                    line = lines[line_index]
+                    x1, y1, x2, y2 = line[0] # y is row index, x is element index in row
+                    if x1 == x2: # Вертикальная линия
+                        for y_index in range(y1,y2+1):
+                            lines_matrix[y_index][x1] = 1 # Fill with ones
+                    if y1 == y2: # Горизонтальная линия
+                        for x_index in range(x1,x2+1):
+                            lines_matrix[y1][x_index] = 1 # Fill with ones
+    
+            # Templates for corners, size 3х3
+            top_right_corner_template = np.array([[1,1,1],[0,0,1],[0,0,1]])
+            top_left_corner_template = np.array([[1,1,1],[1,0,0],[1,0,0]])
+            bottom_right_corner_template = np.array([[0,0,1],[0,0,1],[1,1,1]])
+            bottom_left_corner_template = np.array([[1,0,0],[1,0,0],[1,1,1]])
+            corners_templates = {'top_right': top_right_corner_template, 
+                                 'top_left': top_left_corner_template, 
+                                 'bottom_right': bottom_right_corner_template, 
+                                 'bottom_left': bottom_left_corner_template}
+    
+            # Bypass matrix of lines with window 3х3
+            top_right_corners = []
+            top_left_corners = []
+            bottom_right_corners = []
+            bottom_left_corners = []
+            for x, y in ((x,y) for x in range(1,len(lines_matrix[0])-1) for y in range(1,len(lines_matrix)-1)):
+                # Get matrix 3х3 with center in x,y
+                # In generator already made indent 1 from image borders
+                # first y (row index), than x (index of element in row)
+                # If lines_matrix[y-1:y+2, x-1:x+2], than empty array lines_matrix[990:100, 890:900]
+                window = np.array([lines_matrix[y-1, x-1:x+2],
+                                    lines_matrix[y, x-1:x+2],
+                                    lines_matrix[y+1, x-1:x+2]])
+                for name, template in corners_templates.items():
+                    if np.array_equal(window, template):
+                        if name == 'top_right':
+                            top_right_corners.append((x,y))
+                        elif name == 'top_left':
+                            top_left_corners.append((x,y))
+                        elif name == 'bottom_right':
+                            bottom_right_corners.append((x,y))
+                        elif name == 'bottom_left':
+                            bottom_left_corners.append((x,y))
+            # Coordinates of cells. [0] row numbers (y), [1] column numbers (x), inside 4 corners coordinates
+            # Calclulate amount of rows and columns
+            cells_x = []
+            cells_y = []
+            cells_error = 10 # Presumable error in pixels
+            for top_left_corner in top_left_corners:
+                x_tl, y_tl = top_left_corner
+                x_add = True
+                y_add = True
+                for cell_x in cells_x:
+                    if cell_x - cells_error < x_tl < cell_x + cells_error:
+                        # Considering error this x_tl already in list
+                        x_add = False
+                for cell_y in cells_y:
+                    if cell_y - cells_error < y_tl < cell_y + cells_error:
+                        # Considering error this y_tl already in list
+                        y_add = False
+                if x_add:
+                    cells_x.append(x_tl)
+                if y_add:
+                    cells_y.append(y_tl)
+            cells_rows = len(cells_y)    
+            cells_columns = len(cells_x) 
+            # Initialize matrix with rows and columns to fill
+            cells = np.empty((cells_rows, cells_columns), dtype=object) # 17 строк, 3 столбца
+            cells[:] = np.nan
+            for tlc_index in range(len(top_left_corners)):
+                # Coordinates of top left corner
+                x_tl, y_tl = top_left_corners[tlc_index]
+                # Coordinates of top right corner with same <y> and greater <x> as top left corner
+                for top_rigth_corner in top_right_corners:
+                    x_tr, y_tr = top_rigth_corner
+                    if y_tr == y_tl and x_tr > x_tl:
+                        break
+                # Coordinates of bottom left corner with same <x> and greater <y> as top left corner
+                for bottom_left_corner in bottom_left_corners:
+                    x_bl, y_bl = bottom_left_corner
+                    if x_bl == x_tl and y_bl > y_tl:
+                        break
+                # Coordinates of bottom left corner by top right and bottom left corners
+                x_br, y_br = x_tr, y_bl
+                # Add cell coordinates to cell matrix
+                cells[tlc_index % cells_rows, tlc_index // cells_rows] = ((x_tl, y_tl), (x_tr, y_tr), (x_bl, y_bl), (x_br, y_br))
 
-        # Templates for corners, size 3х3
-        top_right_corner_template = np.array([[1,1,1],[0,0,1],[0,0,1]])
-        top_left_corner_template = np.array([[1,1,1],[1,0,0],[1,0,0]])
-        bottom_right_corner_template = np.array([[0,0,1],[0,0,1],[1,1,1]])
-        bottom_left_corner_template = np.array([[1,0,0],[1,0,0],[1,1,1]])
-        corners_templates = {'top_right': top_right_corner_template, 
-                             'top_left': top_left_corner_template, 
-                             'bottom_right': bottom_right_corner_template, 
-                             'bottom_left': bottom_left_corner_template}
-
-        # Bypass matrix of lines with window 3х3
-        top_right_corners = []
-        top_left_corners = []
-        bottom_right_corners = []
-        bottom_left_corners = []
-        for x, y in ((x,y) for x in range(1,len(lines_matrix[0])-1) for y in range(1,len(lines_matrix)-1)):
-            # Get matrix 3х3 with center in x,y
-            # In generator already made indent 1 from image borders
-            # first y (row index), than x (index of element in row)
-            # If lines_matrix[y-1:y+2, x-1:x+2], than empty array lines_matrix[990:100, 890:900]
-            window = np.array([lines_matrix[y-1, x-1:x+2],
-                                lines_matrix[y, x-1:x+2],
-                                lines_matrix[y+1, x-1:x+2]])
-            for name, template in corners_templates.items():
-                if np.array_equal(window, template):
-                    if name == 'top_right':
-                        top_right_corners.append((x,y))
-                    elif name == 'top_left':
-                        top_left_corners.append((x,y))
-                    elif name == 'bottom_right':
-                        bottom_right_corners.append((x,y))
-                    elif name == 'bottom_left':
-                        bottom_left_corners.append((x,y))
-
-        # Coordinates of cells. [0] row numbers (y), [1] column numbers (x), inside 4 corners coordinates
-        # Calclulate amount of rows and columns
-        cells_x = []
-        cells_y = []
-        cells_error = 10 # Presumable error in pixels
-        for top_left_corner in top_left_corners:
-            x_tl, y_tl = top_left_corner
-            x_add = True
-            y_add = True
-            for cell_x in cells_x:
-                if cell_x - cells_error < x_tl < cell_x + cells_error:
-                    # Considering error this x_tl already in list
-                    x_add = False
-            for cell_y in cells_y:
-                if cell_y - cells_error < y_tl < cell_y + cells_error:
-                    # Considering error this y_tl already in list
-                    y_add = False
-            if x_add:
-                cells_x.append(x_tl)
-            if y_add:
-                cells_y.append(y_tl)
-        cells_rows = len(cells_y)    
-        cells_columns = len(cells_x) 
-        # Initialize matrix with rows and columns to fill
-        cells = np.empty((cells_rows, cells_columns), dtype=object) # 17 строк, 3 столбца
-        cells[:] = np.nan
-        for tlc_index in range(len(top_left_corners)):
-            # Coordinates of top left corner
-            x_tl, y_tl = top_left_corners[tlc_index]
-            # Coordinates of top right corner with same <y> and greater <x> as top left corner
-            for top_rigth_corner in top_right_corners:
-                x_tr, y_tr = top_rigth_corner
-                if y_tr == y_tl and x_tr > x_tl:
-                    break
-            # Coordinates of bottom left corner with same <x> and greater <y> as top left corner
-            for bottom_left_corner in bottom_left_corners:
-                x_bl, y_bl = bottom_left_corner
-                if x_bl == x_tl and y_bl > y_tl:
-                    break
-            # Coordinates of bottom left corner by top right and bottom left corners
-            x_br, y_br = x_tr, y_bl
-            # Add cell coordinates to cell matrix
-            cells[tlc_index % cells_rows, tlc_index // cells_rows] = ((x_tl, y_tl), (x_tr, y_tr), (x_bl, y_bl), (x_br, y_br))
+        elif method == 'intersection':
+            # Make y=ax+b 1st degree equation
+            lines_horizontal = np.array([])
+            lines_vertical = np.array([])
+            for line in lines:
+                x1, y1, x2, y2 = line[0].astype(int) # y is row index, x is element index in row
+                if x2-x1 != 0:
+                    a = (y2-y1)/(x2-x1)
+                else:
+                    a = np.inf
+                # Divide lines to horizontal and vertical by scope coefficient
+                if -1 <= a <= 1:
+                    if lines_horizontal.size == 0:
+                        lines_horizontal = np.array([[x1,y1,x2,y2]])
+                    else:
+                        lines_horizontal = np.append(lines_horizontal, np.array([[x1,y1,x2,y2]]), axis=0)
+                else:
+                    if lines_vertical.size == 0:
+                        lines_vertical = np.array([[x1,y1,x2,y2]])
+                    else:
+                        lines_vertical = np.append(lines_vertical, np.array([[x1,y1,x2,y2]]), axis=0)
+            
+            # Find intersection of lines with https://stackoverflow.com/a/20679579
+            # For equation_horizontal,equation_vertical in ((x,y) for x in lines_horizontal for y in lines_vertical):
+            intersections = np.empty((len(lines_horizontal), len(lines_vertical)), dtype=object)
+            intersections[:] = np.nan
+            for index_h,index_v in ((x,y) for x in range(len(lines_horizontal)) for y in range(len(lines_vertical))):
+                x1, y1, x2, y2 = lines_horizontal[index_h]
+                Ah = (y1 - y2)
+                Bh = (x2 - x1)
+                Ch = (x2*y1 - x1*y2)
+                
+                x1, y1, x2, y2 = lines_vertical[index_v]
+                Av = (y1 - y2)
+                Bv = (x2 - x1)
+                Cv = (x2*y1 - x1*y2)
+                
+                D  = Ah * Bv - Bh * Av
+                Dx = Ch * Bv - Bh * Cv
+                Dy = Ah * Cv - Ch * Av
+                if D != 0:
+                    x = Dx / D
+                    y = Dy / D
+                    # Place point in matrix
+                    intersections[index_h,index_v] = (int(x),int(y)) # Integer pixels
+                else:
+                    raise ValueError(f'No intersection between lines {lines_horizontal[index_h]} and {lines_vertical[index_v]}')
+            
+            # Iterate over intersection matrix to get cell coordinates
+            # For row in intersections[:-1,:-1]:
+            # For top_right_corner in row:
+            cells = np.empty((len(lines_horizontal)-1, len(lines_vertical)-1), dtype=object)
+            cells[:] = np.nan
+            for index_h,index_v in ((x,y) for x in range(len(lines_horizontal)-1) for y in range(len(lines_vertical)-1)):
+                # Add corners from index
+                (x_tl, y_tl) = intersections[index_h, index_v]
+                (x_tr, y_tr) = intersections[index_h, index_v+1]
+                (x_bl, y_bl) = intersections[index_h+1, index_v]
+                (x_br, y_br) = intersections[index_h+1, index_v+1]
+                cells[index_h, index_v] = ((x_tl, y_tl), (x_tr, y_tr), (x_bl, y_bl), (x_br, y_br))
         
         # Choose cell for header 1
         if h1[0] is not None and h1[1] is not None:
