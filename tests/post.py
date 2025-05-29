@@ -13,7 +13,7 @@ test_filename = 'structure_3_1_1.jpg'
 test_response = requests.post(
     url="http://localhost:8000/ocr",
     json={"img_path": f"./tests/examples/{test_filename}"
-          #, "structure": {"skiprows": 3, "num_col": 3, "key_col": 1, "h1": [1,1], "h2": [1,2]}
+          , "structure": {"skiprows": 3, "num_col": 3, "key_col": 1, "h1": [1,1], "h2": [1,2]}
           , 'result_info': 'value'
           }
           )
