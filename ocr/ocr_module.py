@@ -124,7 +124,7 @@ class OCR_doc():
         edges = cv2.Canny(gray, 50, 150)
 
         # Apply Probabilistic Hough Line Transform
-        lines = cv2.HoughLinesP(edges, 1, np.pi/180, 50, minLineLength=200, maxLineGap=10)
+        lines = cv2.HoughLinesP(edges, 1, np.pi/180, 50, minLineLength=200, maxLineGap=5)
         # Examples x1, y1, x2, y2: [[248 1245 248 5]] [[36 622 326 622]]
         # x1=x2, y1>y2; x1<x2, y1=y2
         if lines is None:
